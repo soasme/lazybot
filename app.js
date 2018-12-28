@@ -20,25 +20,31 @@ var bot = new SlackBot({
 // load twitters
 var twitters = {};
 
-// load @techshack twitter credentials
-var techshackCred = process.env.TWITTER_CREDENTIALS_TECHSHACK;
-if (techshackCred === null || techshackCred === undefined) {
-  console.error("env TWITTER_CREDENTIALS_TECHSHACK not found.")
-  process.exit(1);
-}
-try {
-  // https://github.com/ttezel/twit
-  twitters.techshack = new Twit(
+var loadTwitterClient = function(username) {
+  // load twitter credentials by username
+  var envName = 'TWITTER_CREDENTIALS_' + username.toUpperCase();
+  var techshackCred = process.env[envName];
+  var cred;
+
+  if (techshackCred === null || techshackCred === undefined) {
+    console.error("env TWITTER_CREDENTIALS_TECHSHACK not found.")
+    process.exit(1);
+  }
+
+  try {
     // https://stackoverflow.com/questions/5726729/how-to-parse-json-using-node-js
-    JSON.parse(
+    cred = JSON.parse(
       // https://stackoverflow.com/questions/6182315/how-to-do-base64-encoding-in-node-js
       Buffer.from(techshackCred, 'base64').toString('ascii')
-    )
-  );
-} catch (err) {
-  console.error("unable to load env TWITTER_CREDENTIALS_TECHSHACK: " + err.toString());
-  process.exit(1);
+    );
+  } catch (err) {
+    throw Error("unable to load env TWITTER_CREDENTIALS_TECHSHACK: " + err.toString());
+  }
+
+  // https://github.com/ttezel/twit
+  return new Twit(cred);
 }
+
 
 // entry point.
 // all ingoing events https://api.slack.com/rtm
@@ -48,7 +54,7 @@ var onMessage = function(data) {
     var messagePromise = reply(data);
 
     // do not need to handle those patterns we don't know.
-    if (messagePromise == null) {
+    if (messagePromise === null) {
       return;
     }
 
@@ -71,7 +77,7 @@ var onMessage = function(data) {
 var reply = function(data) {
   // This command is for testing if the bot is alive.
   if (/^ping$/.test(data.text)) {
-    return "pong";
+    return pingPong(data);
   }
 
   if (/^tweet @.*:.*/.test(data.text)) {
@@ -79,6 +85,22 @@ var reply = function(data) {
   }
 
   return null;
+}
+
+var pingPong = function(data) {
+  if (data.text != 'ping') {
+    return null;
+  }
+
+  return new Promise(function(resolve, reject) {
+    resolve('pang');
+  })
+}
+
+var textize = function(text) {
+  // simplify <url> to url.
+  text = text.replace(/( *)<(http[^>]+)>( *)/, " $2 ");
+  return text.trim();
 }
 
 var sendTweet = function(data) {
@@ -90,19 +112,22 @@ var sendTweet = function(data) {
   }
 
   var username = match[1];
-  var tweet = match[2].trim();
+  var tweet = textize(match[2]);
 
-  // It cannot send tweet to a user that not configured.
-  if (!twitters[username]) {
-    return null;
-  }
-
-  return twitters[username].post('statuses/update', {status: tweet}, function(err, data, response) {
-    if (err) {
-      return err.toString();
+  return new Promise(function(resolve, reject) {
+    try {
+      loadTwitterClient(username).post('statuses/update', {
+        status: tweet,
+      }, (err, data, response) => {
+        if (err) {
+          resolve(err.toString())
+        } else {
+          resolve('done')
+        }
+      })
+    } catch( err ) {
+      resolve(err.toString())
     }
-
-    return 'done';
   })
 }
 
@@ -115,5 +140,6 @@ if (!module.parent) {
   // https://www.sitepoint.com/understanding-module-exports-exports-node-js/
   module.exports = {
     reply: reply,
+    textize: textize,
   }
 }

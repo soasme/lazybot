@@ -15,6 +15,10 @@ process.env.TWITTER_CREDENTIALS_TECHSHACK = Buffer.from(
 
 var app = require('./app');
 
+// textize: simply <url>
+assert.equal(app.textize('hello<https://wow>'), 'hello https://wow');
+assert.equal(app.textize('hello <https://wow>'), 'hello https://wow');
+
 // reply: sendTweet
 assert.equal(app.reply({
   text: 'tweet @unknown: this is a test.'
