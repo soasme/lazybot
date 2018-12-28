@@ -1,5 +1,7 @@
-// https://hackernoon.com/a-crash-course-on-testing-with-node-js-6c7428d3da02
-var assert = require('assert');
+// https://mochajs.org/
+var assert = require('chai').assert;
+// https://sinonjs.org/
+var sinon = require('sinon');
 
 process.env.SLACK_TOKEN = 'none';
 process.env.SLACK_TOKEN = 'lazybot';
@@ -15,17 +17,22 @@ process.env.TWITTER_CREDENTIALS_TECHSHACK = Buffer.from(
 
 var app = require('./app');
 
-// textize: simply <url>
-assert.equal(app.textize('hello<https://wow>'), 'hello https://wow');
-assert.equal(app.textize('hello <https://wow>'), 'hello https://wow');
+describe('textize', () => {
+  // textize: simply <url>
+  assert.equal(app.textize('hello<https://wow>'), 'hello https://wow');
+  assert.equal(app.textize('hello <https://wow>'), 'hello https://wow');
+})
 
-// reply: sendTweet
-assert.equal(app.reply({
-  text: 'tweet @unknown: this is a test.'
-}), null)
+describe('sendTweet', () => {
+  app.reply({
+    text: 'tweet @techshack: this is a test.'
+  }).then(function(message) {
+    assert.equal(message, 'Error: Invalid or expired token.')
+  })
 
-app.reply({
-  text: 'tweet @techshack: this is a test.'
-}).then(function(message) {
-  assert.equal(message, 'done')
+  app.reply({
+    text: 'tweet @unknown: this is a test.'
+  }).then(function(message) {
+    assert.equal(message, 'Error: env TWITTER_CREDENTIALS_UNKNOWN not found.')
+  })
 })

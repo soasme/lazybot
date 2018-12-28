@@ -7,6 +7,8 @@
 //
 // EOF
 
+const VERSION = '0.1.1';
+
 var SlackBot = require('slackbots');
 var Twit = require('twit');
 
@@ -17,9 +19,6 @@ var bot = new SlackBot({
     name: process.env.SLACK_BOTNAME || 'lazybot',
 });
 
-// load twitters
-var twitters = {};
-
 var loadTwitterClient = function(username) {
   // load twitter credentials by username
   var envName = 'TWITTER_CREDENTIALS_' + username.toUpperCase();
@@ -27,8 +26,7 @@ var loadTwitterClient = function(username) {
   var cred;
 
   if (techshackCred === null || techshackCred === undefined) {
-    console.error("env TWITTER_CREDENTIALS_TECHSHACK not found.")
-    process.exit(1);
+    throw Error("env " + envName + " not found.");
   }
 
   try {
@@ -38,7 +36,7 @@ var loadTwitterClient = function(username) {
       Buffer.from(techshackCred, 'base64').toString('ascii')
     );
   } catch (err) {
-    throw Error("unable to load env TWITTER_CREDENTIALS_TECHSHACK: " + err.toString());
+    throw Error("unable to load env " + envName + ": " + err.toString());
   }
 
   // https://github.com/ttezel/twit
@@ -114,18 +112,19 @@ var sendTweet = function(data) {
   var username = match[1];
   var tweet = textize(match[2]);
 
+  // TODO: validate tweet length.
+
   return new Promise(function(resolve, reject) {
     try {
+      // load client and then send out the tweet.
       loadTwitterClient(username).post('statuses/update', {
         status: tweet,
       }, (err, data, response) => {
-        if (err) {
-          resolve(err.toString())
-        } else {
-          resolve('done')
-        }
+        // it should reply with done or an error message.
+        resolve(err ? err.toString() : 'done')
       })
     } catch( err ) {
+      // loading client or sending tweet might report error.
       resolve(err.toString())
     }
   })
@@ -141,5 +140,6 @@ if (!module.parent) {
   module.exports = {
     reply: reply,
     textize: textize,
+    loadTwitterClient: loadTwitterClient,
   }
 }

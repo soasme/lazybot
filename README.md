@@ -18,5 +18,5 @@ $ heroku scale -a soasme-lazybot web=0 worker=1
 ## Test
 
 ```
-$ node test_app.js
+$ ./node_modules/.bin/mocha test_app.js
 ```
