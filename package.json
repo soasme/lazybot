@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "slackbots": "^1.2.0"
+    "slackbots": "^1.2.0",
+    "twit": "^2.2.11"
+  },
+  "devDependencies": {
+    "assert": "^1.4.1"
   }
 }
